@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telemetria - Velocímetro IoT</title>
+    <style>
+        body {
+            background-color: #121214;
+            color: #ffffff;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .painel {
+            background: #1e1e24;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            width: 350px;
+            border: 2px solid #00ff88;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            color: #a0a0a5;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .display-container {
+            margin: 20px 0;
+        }
+        .valor {
+            font-size: 4.5rem;
+            font-weight: bold;
+            color: #00ff88;
+            font-family: monospace;
+            line-height: 1;
+        }
+        .unidade {
+            font-size: 1.2rem;
+            color: #8a8a93;
+            text-transform: uppercase;
+        }
+        .divisor {
+            height: 1px;
+            background: #29292e;
+            margin: 20px 0;
+        }
+        .sub-valor {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00e1ff;
+            font-family: monospace;
+        }
+        .status {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="painel">
+        <h1>Telemetria ESP32</h1>
+        
+        <div class="display-container">
+            <div id="vel-val" class="valor">0.0</div>
+            <div class="unidade">km/h</div>
+        </div>
+        
+        <div class="divisor"></div>
+        
+        <div class="display-container">
+            <div id="rpm-val" class="sub-valor">0</div>
+            <div class="unidade">RPM</div>
+        </div>
+
+        <div id="update-status" class="status">Aguardando dados...</div>
+    </div>
+
+    <script>
+        async function atualizarVelocimetro() {
+            try {
+                const resposta = await fetch('buscar_ultimo.php');
+                if (!resposta.ok) throw new Error('Erro na requisição');
+                
+                const dados = await resposta.json();
+                
+                if (dados.erro) {
+                    document.getElementById('update-status').innerText = dados.erro;
+                    return;
+                }
+
+                document.getElementById('vel-val').innerText = dados.velocidade.toFixed(1);
+                document.getElementById('rpm-val').innerText = dados.rpm;
+                
+                if (dados.data_hora) {
+                    document.getElementById('update-status').innerText = "Atualizado em: " + dados.data_hora;
+                }
+            } catch (erro) {
+                console.error('Falha ao buscar dados:', erro);
+                document.getElementById('update-status').innerText = "Erro de conexão com a API";
+            }
+        }
+
+        // Executa a busca a cada 300ms
+        setInterval(atualizarVelocimetro, 300);
+    </script>
+</body>
+</html>
