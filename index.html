@@ -1,116 +1,176 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telemetria - Velocímetro IoT</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-gauges@2.1.7/gauge.min.js"></script>
     <style>
         body {
-            background-color: #121214;
+            background-color: #0e1013;
             color: #ffffff;
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            height: 100vh;
+            justify-content: center;
+            min-height: 100vh;
             margin: 0;
+            overflow: hidden;
         }
-        .painel {
-            background: #1e1e24;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            text-align: center;
-            width: 350px;
-            border: 2px solid #00ff88;
+
+        .painel-container {
+            background: linear-gradient(145deg, #1a1d24, #111318);
+            border: 4px solid #2c313c;
+            border-radius: 50px;
+            padding: 30px 50px;
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(255,255,255,0.05);
         }
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 30px;
-            color: #a0a0a5;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+
+        .gauge-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .display-container {
-            margin: 20px 0;
-        }
-        .valor {
-            font-size: 4.5rem;
-            font-weight: bold;
-            color: #00ff88;
-            font-family: monospace;
-            line-height: 1;
-        }
-        .unidade {
+
+        #status {
+            margin-top: 25px;
             font-size: 1.2rem;
-            color: #8a8a93;
-            text-transform: uppercase;
+            background-color: #161a22;
+            padding: 8px 25px;
+            border-radius: 20px;
+            border: 1px solid #232936;
+            color: #00ff66;
+            text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+            animation: pulse 2s infinite;
         }
-        .divisor {
-            height: 1px;
-            background: #29292e;
-            margin: 20px 0;
-        }
-        .sub-valor {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #00e1ff;
-            font-family: monospace;
-        }
-        .status {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 20px;
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
         }
     </style>
 </head>
 <body>
 
-    <div class="painel">
-        <h1>Telemetria ESP32</h1>
-        
-        <div class="display-container">
-            <div id="vel-val" class="valor">0.0</div>
-            <div class="unidade">km/h</div>
-        </div>
-        
-        <div class="divisor"></div>
-        
-        <div class="display-container">
-            <div id="rpm-val" class="sub-valor">0</div>
-            <div class="unidade">RPM</div>
+    <div class="painel-container">
+        <div class="gauge-box">
+            <canvas id="gauge-velocidade"></canvas>
         </div>
 
-        <div id="update-status" class="status">Aguardando dados...</div>
+        <div class="gauge-box">
+            <canvas id="gauge-rpm"></canvas>
+        </div>
     </div>
 
+    <div id="status">Buscando dados da telemetria...</div>
+
     <script>
-        async function atualizarVelocimetro() {
+        // Configuração do Velocímetro de KM/H
+        var gaugeVelocidade = new RadialGauge({
+            renderTo: 'gauge-velocidade',
+            width: 320,
+            height: 320,
+            units: 'KM/H',
+            title: 'TELEMETRIA',
+            minValue: 0,
+            maxValue: 240,
+            majorTicks: ['0','20','40','60','80','100','120','140','160','180','200','220','240'],
+            minorTicks: 2,
+            strokeTicks: true,
+            highlights: [{ from: 180, to: 240, color: 'rgba(200, 50, 50, .75)' }],
+            colorPlate: '#1c2028',
+            colorMajorTicks: '#f5f5f5',
+            colorMinorTicks: '#ddd',
+            colorTitle: '#fff',
+            colorUnits: '#00ff66',
+            colorNumbers: '#fff',
+            colorNeedle: '#00ff66',
+            colorNeedleEnd: '#00ff66',
+            valueBox: true,
+            fontValueSize: 45,
+            colorValueBoxRect: '#13161c',
+            colorValueBoxBackground: '#13161c',
+            colorValueText: '#00ff66',
+            borderShadowWidth: 0,
+            borders: true,
+            borderInnerWidth: 0,
+            borderMiddleWidth: 0,
+            borderOuterWidth: 10,
+            colorBorderOuter: '#2c313c',
+            needleType: 'arrow',
+            needleWidth: 3,
+            animationDuration: 500,
+            animationRule: 'linear'
+        }).draw();
+
+        // Configuração do Conta-Giros de RPM
+        var gaugeRpm = new RadialGauge({
+            renderTo: 'gauge-rpm',
+            width: 260,
+            height: 260,
+            units: 'RPM',
+            title: '×1000',
+            minValue: 0,
+            maxValue: 8,
+            majorTicks: ['0','1','2','3','4','5','6','7','8'],
+            minorTicks: 5,
+            strokeTicks: true,
+            highlights: [{ from: 6, to: 8, color: 'rgba(200, 50, 50, .75)' }],
+            colorPlate: '#1c2028',
+            colorMajorTicks: '#f5f5f5',
+            colorMinorTicks: '#ddd',
+            colorTitle: '#aaa',
+            colorUnits: '#00ff66',
+            colorNumbers: '#fff',
+            colorNeedle: '#00ff66',
+            colorNeedleEnd: '#00ff66',
+            valueBox: true,
+            fontValueSize: 40,
+            colorValueBoxRect: '#13161c',
+            colorValueBoxBackground: '#13161c',
+            colorValueText: '#00ff66',
+            borderShadowWidth: 0,
+            borders: true,
+            borderInnerWidth: 0,
+            borderMiddleWidth: 0,
+            borderOuterWidth: 8,
+            colorBorderOuter: '#2c313c',
+            needleType: 'arrow',
+            needleWidth: 3,
+            animationDuration: 500,
+            animationRule: 'linear'
+        }).draw();
+
+        // Função para buscar os dados do seu arquivo PHP automático
+        async function atualizarPainel() {
             try {
                 const resposta = await fetch('buscar_ultimo.php');
-                if (!resposta.ok) throw new Error('Erro na requisição');
-                
                 const dados = await resposta.json();
                 
-                if (dados.erro) {
-                    document.getElementById('update-status').innerText = dados.erro;
-                    return;
-                }
-
-                document.getElementById('vel-val').innerText = dados.velocidade.toFixed(1);
-                document.getElementById('rpm-val').innerText = dados.rpm;
-                
-                if (dados.data_hora) {
-                    document.getElementById('update-status').innerText = "Atualizado em: " + dados.data_hora;
+                if(dados && !dados.erro) {
+                    // Atualiza os ponteiros e as caixas digitais dos ponteiros
+                    gaugeVelocidade.value = parseFloat(dados.velocidade).toFixed(1);
+                    
+                    // Converte o RPM bruto (ex: 3000) para escala de painel de carro (ex: 3.0)
+                    let rpmEscala = (parseFloat(dados.rpm) / 1000).toFixed(2);
+                    gaugeRpm.value = rpmEscala;
+                    
+                    document.getElementById('status').innerText = "Conectado ao ESP32";
+                    document.getElementById('status').style.color = "#00ff66";
                 }
             } catch (erro) {
-                console.error('Falha ao buscar dados:', erro);
-                document.getElementById('update-status').innerText = "Erro de conexão com a API";
+                document.getElementById('status').innerText = "Aguardando novos dados...";
+                document.getElementById('status').style.color = "#ff9900";
             }
         }
 
-        // Executa a busca a cada 300ms
-        setInterval(atualizarVelocimetro, 300);
+        // Fica rodando em loop a cada meio segundo (500 milissegundos) igual o seu antigo
+        setInterval(atualizarPainel, 500);
     </script>
 </body>
 </html>
